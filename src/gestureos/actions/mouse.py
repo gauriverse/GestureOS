@@ -6,7 +6,7 @@ pyautogui.PAUSE = 0
 
 
 class MouseController:
-    def __init__(self, margin: float = 0.15, smoothing: float = 0.3):
+    def __init__(self, margin: float = 0.08, smoothing: float = 0.6):
         self.screen_w, self.screen_h = pyautogui.size()
         self.margin = margin        
         self.alpha = smoothing      
