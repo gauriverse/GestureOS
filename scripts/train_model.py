@@ -11,10 +11,14 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
 
+from gestureos.features.normalize import distance_features
+
+
 DATA_DIR = Path("data/raw")
 MODEL_DIR = Path("models")
-MODEL_NAME = "gesture_model_v1"
-TRAIN_SESSIONS = [1, 2]
+USE_DISTANCES = True
+MODEL_NAME = "gesture_model_v2" if USE_DISTANCES else "gesture_model_v1"
+TRAIN_SESSIONS = [1, 2, 4]
 TEST_SESSION = 3
 
 
@@ -23,6 +27,8 @@ def load_data():
                    ignore_index=True)
     feature_cols = [c for c in df.columns if c.startswith("f")]
     X = df[feature_cols].to_numpy(dtype=np.float32)
+    if USE_DISTANCES:
+        X = np.hstack([X, distance_features(X)])
     y = df["label"].to_numpy()
     sessions = df["session"].to_numpy()
     return X, y, sessions

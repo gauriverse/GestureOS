@@ -35,6 +35,26 @@ def test_degenerate_hand_returns_zeros():
     out = normalize_hand(hand)
     assert np.all(out == 0.0)
 
+from gestureos.features.normalize import distance_features, N_DISTANCE_FEATURES
+
+
+def test_distance_shape():
+    X = np.stack([normalize_hand(make_hand(s)) for s in range(5)])
+    d = distance_features(X)
+    assert d.shape == (5, N_DISTANCE_FEATURES), d.shape
+
+
+def test_distance_rotation_invariant():
+    X = normalize_hand(make_hand(3)).reshape(21, 3).copy()
+    theta = 0.7
+    R = np.array([[np.cos(theta), -np.sin(theta)],
+                  [np.sin(theta),  np.cos(theta)]], dtype=np.float32)
+    rotated = X.copy()
+    rotated[:, :2] = X[:, :2] @ R.T
+    a = distance_features(X.flatten()[None])
+    b = distance_features(rotated.flatten()[None])
+    assert np.allclose(a, b, atol=1e-5)
+
 
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
