@@ -1,29 +1,28 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useStatus } from "./useStatus";
 
-const MAX_POINTS = 120; // about 12 seconds at 10 updates per second
+const MAX_POINTS = 120;
 
 export default function App() {
   const { status, connected } = useStatus();
   const [history, setHistory] = useState<{ t: number; fps: number; latency: number }[]>([]);
   const [usage, setUsage] = useState<Record<string, number>>({});
+  const prevStable = useRef<string | null>(null);
 
-  // Build the time series and count gesture usage each time a new status arrives.
-  // Schedule the state updates on the next tick so React does not trigger a
-  // synchronous render cascade directly from this effect.
+
   useEffect(() => {
     if (!status) return;
+    const cur = status.stable;
+    const newGesture = cur && cur !== prevStable.current && cur !== "open_palm" ? cur : null;
+    prevStable.current = cur;
 
-    const timeoutId = window.setTimeout(() => {
+    queueMicrotask(() => {
       setHistory((h) => [...h, { t: Date.now(), fps: status.fps, latency: status.latency_ms }].slice(-MAX_POINTS));
-
-      if (status.stable && status.stable !== "open_palm") {
-        setUsage((u) => ({ ...u, [status.stable as string]: (u[status.stable as string] ?? 0) + 1 }));
+      if (newGesture) {
+        setUsage((u) => ({ ...u, [newGesture]: (u[newGesture] ?? 0) + 1 }));
       }
-    }, 0);
-
-    return () => window.clearTimeout(timeoutId);
+    });
   }, [status]);
 
   return (
@@ -50,7 +49,7 @@ export default function App() {
         </LineChart>
       </ResponsiveContainer>
 
-      <h3>Gesture usage this session</h3>
+      <h3>Gesture events this session</h3>
       <ul>
         {Object.entries(usage).sort((a, b) => b[1] - a[1]).map(([name, n]) => (
           <li key={name}>{name}: {n}</li>
