@@ -31,3 +31,9 @@ class MouseController:
 
     def right_click(self):
         pyautogui.rightClick()
+
+    def scroll_up(self, amount: int = 300):
+        pyautogui.scroll(amount)
+
+    def scroll_down(self, amount: int = 300):
+        pyautogui.scroll(-amount)

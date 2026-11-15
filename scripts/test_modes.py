@@ -56,6 +56,10 @@ while True:
             mouse.click()
         elif stable == "peace" and prev_stable != "peace" and cooldown.ready("right"):
             mouse.right_click()
+        elif stable == "thumb_up" and volume_repeat.ready("scroll_up"):
+            mouse.scroll_up()
+        elif stable == "thumb_down" and volume_repeat.ready("scroll_down"):
+            mouse.scroll_down()
 
     elif modes.mode == "media":
         if stable == "thumb_up" and volume_repeat.ready("vol_up"):
