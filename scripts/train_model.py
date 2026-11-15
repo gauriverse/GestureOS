@@ -2,6 +2,7 @@ import glob
 from pathlib import Path
 
 import joblib
+import json
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
@@ -56,14 +57,21 @@ def main():
     X_test, y_test = X[test_mask], y[test_mask]
     print(f"train: {len(X_train)} samples | test: {len(X_test)} samples")
 
+    labels = sorted(set(y))
+    results = {}
     best_name, best_model, best_acc = None, None, -1.0
     for name, model in build_candidates().items():
         model.fit(X_train, y_train)
         pred = model.predict(X_test)
         acc = (pred == y_test).mean()
+        report = classification_report(y_test, pred, digits=3, output_dict=True)
+        results[name] = {
+            "accuracy": float(acc),
+            "per_class": {k: report[k] for k in labels},
+            "confusion": confusion_matrix(y_test, pred, labels=labels).tolist(),
+        }
         print(f"\n=== {name}  accuracy: {acc:.4f} ===")
         print(classification_report(y_test, pred, digits=3))
-        labels = sorted(set(y_test))
         print("confusion matrix (rows = true, cols = predicted):")
         print(pd.DataFrame(confusion_matrix(y_test, pred, labels=labels),
                            index=labels, columns=labels))
@@ -72,9 +80,19 @@ def main():
 
     MODEL_DIR.mkdir(exist_ok=True)
     out_path = MODEL_DIR / f"{MODEL_NAME}.joblib"
-    joblib.dump({"model": best_model, "classifier": best_name,
-                 "labels": sorted(set(y))}, out_path)
-    print(f"\nBest: {best_name} ({best_acc:.4f}). Saved to {out_path}")
+    joblib.dump({"model": best_model, "classifier": best_name, "labels": labels}, out_path)
+
+    metrics = {
+        "model": MODEL_NAME,
+        "classifier": best_name,
+        "train_sessions": TRAIN_SESSIONS,
+        "test_session": TEST_SESSION,
+        "results": results,
+        "note": "Test session was used to choose features, so these numbers are optimistic "
+                "until a fresh session is recorded.",
+    }
+    (MODEL_DIR / f"{MODEL_NAME}_metrics.json").write_text(json.dumps(metrics, indent=2))
+    print(f"\nBest: {best_name} ({best_acc:.4f}). Saved to {out_path} and metrics JSON.")
 
 
 if __name__ == "__main__":

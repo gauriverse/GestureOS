@@ -1,5 +1,7 @@
 import asyncio
 import threading
+import json
+from pathlib import Path
 from contextlib import asynccontextmanager
 from dataclasses import asdict
 
@@ -36,6 +38,10 @@ app.add_middleware(
 @app.get("/status")
 def get_status():
     return asdict(app.state.controller.status)
+
+@app.get("/metrics")
+def get_metrics():
+    return json.loads(Path("models/gesture_model_v2_metrics.json").read_text())
 
 
 @app.websocket("/ws")

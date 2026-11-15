@@ -4,11 +4,39 @@ import { useStatus } from "./useStatus";
 
 const MAX_POINTS = 120;
 
+type PerClassMetric = {
+  precision: number;
+  recall: number;
+  "f1-score": number;
+  support: number;
+};
+
+type ClassifierResults = {
+  accuracy: number;
+  per_class: Record<string, PerClassMetric>;
+};
+
+type MetricsData = {
+  model: string;
+  classifier: string;
+  test_session: string;
+  results: Record<string, ClassifierResults>;
+};
+
 export default function App() {
   const { status, connected } = useStatus();
   const [history, setHistory] = useState<{ t: number; fps: number; latency: number }[]>([]);
   const [usage, setUsage] = useState<Record<string, number>>({});
   const prevStable = useRef<string | null>(null);
+
+  const [metrics, setMetrics] = useState<MetricsData | null>(null);
+
+  useEffect(() => {
+    fetch("http://127.0.0.1:8000/metrics")
+      .then((r) => r.json())
+      .then(setMetrics)
+      .catch(() => setMetrics(null));
+  }, []);
 
 
   useEffect(() => {
@@ -55,6 +83,35 @@ export default function App() {
           <li key={name}>{name}: {n}</li>
         ))}
       </ul>
+
+            {metrics && (
+        <>
+          <h3>Model evaluation: {metrics.model} ({metrics.classifier})</h3>
+          <p style={{ color: "#b45309" }}>
+            Tested on session {metrics.test_session}. Features were chosen after seeing this session's
+            errors, so treat these numbers as optimistic until a fresh session is recorded.
+          </p>
+          <p>Overall accuracy: {(metrics.results[metrics.classifier].accuracy * 100).toFixed(1)}%</p>
+          <table style={{ borderCollapse: "collapse", width: "100%" }}>
+            <thead>
+              <tr>
+                <th align="left">Gesture</th><th>Precision</th><th>Recall</th><th>F1</th><th>Support</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(metrics.results[metrics.classifier].per_class).map(([name, m]: [string, PerClassMetric]) => (
+                <tr key={name}>
+                  <td>{name}</td>
+                  <td align="center">{m.precision.toFixed(3)}</td>
+                  <td align="center">{m.recall.toFixed(3)}</td>
+                  <td align="center">{m["f1-score"].toFixed(3)}</td>
+                  <td align="center">{m.support}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
     </div>
   );
 }
