@@ -66,6 +66,8 @@ while True:
             media.volume_up()
         elif stable == "thumb_down" and volume_repeat.ready("vol_down"):
             media.volume_down()
+        elif stable == "peace" and prev_stable != "peace" and cooldown.ready("playpause"):
+            media.play_pause()
 
     elif modes.mode == "presentation":
         if stable not in ("thumb_up", "thumb_down"):
