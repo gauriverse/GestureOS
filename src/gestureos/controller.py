@@ -37,7 +37,7 @@ class GestureController:
         self.slide_armed = True
         self.prev_stable = None
         self.status = Status(self.modes.mode, None, None, 0.0, 0.0, 0.0)
-
+        self._running = True
         self.cap = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)
         if not self.cap.isOpened():
             raise RuntimeError("Webcam not found")
@@ -101,10 +101,13 @@ class GestureController:
                 presentation.previous_slide()
                 self.slide_armed = False
 
+    def stop(self):
+        self._running = False
+
     def run(self, show_window=True):
         fps = 0.0
         last = time.perf_counter()
-        while True:
+        while self._running:
             ok, frame = self.cap.read()
             if not ok:
                 break
