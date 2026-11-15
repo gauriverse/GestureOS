@@ -8,6 +8,7 @@ from gestureos.actions import media
 from gestureos.actions.mouse import MouseController
 from gestureos.actions.cooldown import Cooldown
 from gestureos.modes import ModeManager
+from gestureos.actions import presentation
 
 INDEX_TIP = 8
 
@@ -18,6 +19,8 @@ modes = ModeManager(hold_seconds=1.0)
 mouse = MouseController()
 cooldown = Cooldown(0.5)
 volume_repeat = Cooldown(0.4)
+slide_cooldown = Cooldown(0.5)
+slide_armed = True
 
 cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 if not cap.isOpened():
@@ -41,6 +44,8 @@ while True:
         lm, label, conf = None, None, 0.0
 
     stable = smoother.update(label, conf)
+    if stable != prev_stable:
+        print("stable:", stable, "| raw:", label, f"{conf:.2f}", flush=True)
     if modes.update(stable):
         print("mode:", modes.mode)
 
@@ -58,12 +63,29 @@ while True:
         elif stable == "thumb_down" and volume_repeat.ready("vol_down"):
             media.volume_down()
 
+    elif modes.mode == "presentation":
+        if stable not in ("thumb_up", "thumb_down"):
+            slide_armed = True
+
+        if stable == "index_up" and lm is not None:
+            mouse.move_to(lm[INDEX_TIP, 0], lm[INDEX_TIP, 1])
+        elif stable == "fist" and prev_stable != "fist" and cooldown.ready("click"):
+            mouse.click()
+        elif stable == "thumb_up" and slide_armed and slide_cooldown.ready("next"):
+            presentation.next_slide()
+            slide_armed = False
+        elif stable == "thumb_down" and slide_armed and slide_cooldown.ready("prev"):
+            presentation.previous_slide()
+            slide_armed = False
+
     prev_stable = stable
 
     cv2.putText(frame, f"mode: {modes.mode}", (10, 40),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 255), 2)
     cv2.putText(frame, f"action: {stable or '...'}", (10, 80),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+    cv2.putText(frame, f"stable: {stable or '-'} armed: {slide_armed}", (10, 120),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
     cv2.imshow("GestureOS - modes test", frame)
     if cv2.waitKey(1) & 0xFF == ord("q"):
         break

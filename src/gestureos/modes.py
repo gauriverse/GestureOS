@@ -1,6 +1,6 @@
 import time
 
-MODES = ["desktop", "media"]
+MODES = ["desktop", "media", "presentation"]
 
 class ModeManager:
 
